@@ -1,0 +1,130 @@
+# Playwright Quick Reference
+
+*A short cheat sheet to skim anytime — not a full tutorial.*
+
+---
+
+## 1. Setup & Run
+```bash
+npm init playwright@latest      # create project
+npx playwright test             # run all tests
+npx playwright test --ui        # run in UI mode (great for debugging)
+npx playwright test --headed    # see the browser while running
+npx playwright codegen <url>    # auto-generate test code by clicking around
+```
+
+## 2. Basic Test Structure
+```js
+import { test, expect } from '@playwright/test';
+
+test('login test', async ({ page }) => {
+  await page.goto('https://example.com');
+  await page.getByLabel('Email').fill('test@test.com');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page.getByText('Welcome')).toBeVisible();
+});
+```
+
+## 3. Locators (preferred → least preferred)
+```js
+page.getByRole('button', { name: 'Submit' })   // best - accessible
+page.getByLabel('Username')
+page.getByPlaceholder('Enter email')
+page.getByText('Sign up')
+page.getByTestId('submit-btn')                 // needs data-testid in HTML
+page.locator('css=.class-name')                // fallback only
+```
+
+## 4. Common Actions
+```js
+await page.click(selector)
+await page.fill(selector, 'text')
+await page.type(selector, 'text')      // simulates typing
+await page.check(selector)             // checkbox/radio
+await page.selectOption(selector, 'value')
+await page.hover(selector)
+await page.press(selector, 'Enter')
+```
+
+## 5. Assertions
+```js
+await expect(locator).toBeVisible()
+await expect(locator).toHaveText('text')
+await expect(locator).toHaveValue('text')
+await expect(locator).toBeEnabled()
+await expect(locator).toBeChecked()
+await expect(page).toHaveURL(/dashboard/)
+await expect(page).toHaveTitle('My App')
+```
+
+## 6. Waits (Playwright auto-waits — you rarely need manual waits)
+```js
+await page.waitForSelector(selector)
+await page.waitForURL('**/dashboard')
+await page.waitForLoadState('networkidle')
+```
+👉 Avoid `page.waitForTimeout()` unless absolutely necessary — it's a fixed delay, not a smart wait.
+
+## 7. Handling Common Situations
+```js
+// New tab / popup
+const [newPage] = await Promise.all([
+  context.waitForEvent('page'),
+  page.click('a[target="_blank"]'),
+]);
+
+// iframe
+const frame = page.frameLocator('#iframe-id');
+await frame.getByRole('button').click();
+
+// Alert/dialog
+page.on('dialog', dialog => dialog.accept());
+```
+
+## 8. Page Object Model (POM) — basic shape
+```js
+// pages/LoginPage.js
+export class LoginPage {
+  constructor(page) {
+    this.page = page;
+    this.emailInput = page.getByLabel('Email');
+    this.loginBtn = page.getByRole('button', { name: 'Login' });
+  }
+  async login(email, password) {
+    await this.emailInput.fill(email);
+    await this.page.getByLabel('Password').fill(password);
+    await this.loginBtn.click();
+  }
+}
+
+// in test file
+const loginPage = new LoginPage(page);
+await loginPage.login('a@a.com', 'pass123');
+```
+**Why:** keeps locators/actions in one place → easier to maintain when UI changes.
+
+## 9. API Testing in Playwright
+```js
+const response = await request.get('https://api.site.com/users');
+expect(response.status()).toBe(200);
+const body = await response.json();
+expect(body.length).toBeGreaterThan(0);
+```
+
+## 10. Debugging
+```bash
+npx playwright test --debug     # step through test
+npx playwright show-report      # view HTML report after a run
+```
+
+---
+
+### Your learning order (keep it simple)
+1. Locators + actions + assertions ✅ (you know this)
+2. Waits & handling dynamic content
+3. iframes / popups / dialogs
+4. Page Object Model
+5. API testing basics
+6. Build the portfolio project
+
+*One section a day is enough. This note is here so you don't have to hold it all in your head.*
